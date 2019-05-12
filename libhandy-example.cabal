@@ -1,0 +1,21 @@
+name:                libhandy-example
+version:             0.1.0.0
+synopsis:            Example for using gi-Handy
+description:         A haskell port of the libhandy examples, using gi-handy.
+homepage:            https://github.com/tsahyt/libhandy-example#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Paul Ogris
+maintainer:          paul@tsahyt.com
+copyright:           2019 Paul Ogris
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  README.md
+
+executable libhandy-example
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  other-modules:       DemoWindow
+  default-language:    Haskell2010
+  build-depends:       base >= 4.7 && < 5, gi-handy, gi-gtk, gi-gio, text
