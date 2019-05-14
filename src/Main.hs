@@ -16,10 +16,12 @@ import DemoWindow
 import Prelude
 
 startup :: IO ()
-startup = undefined
+startup = pure ()
 
 showWindow :: Gtk.Application -> IO ()
-showWindow app = undefined
+showWindow app = do
+    window <- demoWindow app
+    Gtk.widgetShowAll (appWindow window)
 
 main :: IO ()
 main = do
@@ -27,7 +29,7 @@ main = do
     -- initialize libhandy
     _ <- Hdy.init (Just $ map pack argv)
     -- set up application
-    app <- new Gtk.Application [#applicationId := "libhandy-demo"]
+    app <- new Gtk.Application []
     on app #startup startup
     on app #activate (showWindow app)
     -- run
