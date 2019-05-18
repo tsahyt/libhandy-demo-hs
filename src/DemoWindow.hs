@@ -15,7 +15,7 @@ import Data.Char
 import Prelude
 import Data.FileEmbed
 import Data.GI.Gtk.BuildFn
-import GI.Gtk (AttrOp(..), set, on, get, set, after)
+import GI.Gtk (AttrOp(..), set, on, get, set, after, new)
 
 import qualified GI.Gtk as Gtk
 import qualified GI.Handy as Hdy
@@ -46,6 +46,8 @@ data DemoWindow = DemoWindow
     , headerGroup :: Hdy.HeaderGroup
     , adjArrowsCount :: Gtk.Adjustment
     , adjArrowsDuration :: Gtk.Adjustment
+    , presentationDialogButton :: Gtk.Button
+    , actionDialogButton :: Gtk.Button
     }
 
 keyPressedCB :: DemoWindow -> Gdk.EventKey -> IO Bool
@@ -101,6 +103,8 @@ buildDemoWindow = DemoWindow
     <*> getObject Hdy.HeaderGroup "header_group"
     <*> getObject Gtk.Adjustment "adj_arrows_count"
     <*> getObject Gtk.Adjustment "adj_arrows_duration"
+    <*> getObject Gtk.Button "presentation_dialog_button"
+    <*> getObject Gtk.Button "action_dialog_button"
 
 dialerSignals :: MonadIO m => DemoWindow -> m ()
 dialerSignals DemoWindow{..} = do
@@ -113,6 +117,50 @@ dialerSignals DemoWindow{..} = do
         (\_ -> get dialer #number >>= \num -> set display [#label := num])
     
     pure ()
+
+dialogLabel :: IO Gtk.Label
+dialogLabel =
+    new Gtk.Label
+        [ #label := "Hello, World!"
+        , #vexpand := True
+        , #valign := Gtk.AlignCenter
+        , #halign := Gtk.AlignCenter
+        ]
+
+presentationDialog :: DemoWindow -> IO ()
+presentationDialog DemoWindow{..} = do
+    dlg <- new Hdy.Dialog [#title := "HdyDialog", #transientFor := appWindow ]
+    lbl <- dialogLabel
+
+    Gtk.dialogGetContentArea dlg >>= flip Gtk.containerAdd lbl
+    Gtk.widgetShow lbl
+    Gtk.widgetShow dlg
+
+actionDialog :: DemoWindow -> IO ()
+actionDialog DemoWindow {..} = do
+    dlg <-
+        new
+            Hdy.Dialog
+            [ #title := "HdyDialog"
+            , #transientFor := appWindow
+            , #useHeaderBar := 1
+            ]
+    Gtk.dialogAddButton
+        dlg
+        "Done"
+        (fromIntegral . fromEnum $ Gtk.ResponseTypeAccept)
+    Gtk.dialogAddButton
+        dlg
+        "Cancel"
+        (fromIntegral . fromEnum $ Gtk.ResponseTypeCancel)
+    Gtk.dialogSetDefaultResponse
+        dlg
+        (fromIntegral . fromEnum $ Gtk.ResponseTypeAccept)
+    on dlg #response $ const (Gtk.widgetDestroy dlg)
+    lbl <- dialogLabel
+    Gtk.dialogGetContentArea dlg >>= flip Gtk.containerAdd lbl
+    Gtk.widgetShow lbl
+    Gtk.widgetShow dlg
 
 demoWindow :: MonadIO m => Gtk.Application -> m DemoWindow
 demoWindow app = do
@@ -134,7 +182,14 @@ demoWindow app = do
 
     dialerSignals w
 
-    on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \_ ->
-        set arrows [#direction := undefined]
+    {- on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \_ ->
+     -     set arrows [#direction := undefined] -}
+    on adjArrowsCount #valueChanged $
+        set arrows [ #count :=> truncate <$> get adjArrowsCount #value ]
+    on adjArrowsDuration #valueChanged $
+        set arrows [ #duration :=> truncate <$> get adjArrowsDuration #value ]
+    
+    on presentationDialogButton #clicked (presentationDialog w)
+    on actionDialogButton #clicked (actionDialog w)
 
     pure w

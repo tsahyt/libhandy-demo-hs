@@ -1157,7 +1157,7 @@
                         <property name="halign">center</property>
                         <property name="spacing">12</property>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="presentation_dialog_button">
                             <property name="visible">True</property>
                             <property name="label" translatable="yes">Presentation Dialog</property>
                             <signal name="clicked" handler="dialog_clicked_cb" swapped="no"/>
@@ -1169,7 +1169,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="action_dialog_button">
                             <property name="visible">True</property>
                             <property name="label" translatable="yes">Action Dialog</property>
                             <signal name="clicked" handler="dialog_action_clicked_cb" swapped="no"/>
@@ -1317,6 +1317,7 @@
       <widget name="sub_header_bar"/>
       <widget name="scrolled_window"/>
     </widgets>
+
   </object>
   <object class="HdyHeaderGroup" id="header_group">
     <headerbars>
