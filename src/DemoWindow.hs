@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 module DemoWindow
     ( demoWindow
     , appWindow
@@ -12,14 +13,22 @@ import Control.Monad
 import Data.Text (Text)
 import Data.Functor (($>))
 import Data.Char
+import Data.Maybe (fromJust)
 import Prelude
 import Data.FileEmbed
 import Data.GI.Gtk.BuildFn
+import Data.GI.Gtk.ModelView.SeqStore
+import Data.GI.Base
+import Data.GI.Base.GType
 import GI.Gtk (AttrOp(..), set, on, get, set, after, new)
+
+-- necessary because of some callback functions, see below. is this fixable with overrides?
+import Foreign.Ptr (nullPtr)
 
 import qualified GI.Gtk as Gtk
 import qualified GI.Handy as Hdy
 import qualified GI.Gdk as Gdk
+import qualified GI.Gio as Gio
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
@@ -159,7 +168,34 @@ actionDialog DemoWindow {..} = do
     dialogLabelAndShow dlg
 
 listsPageInit :: MonadIO m => DemoWindow -> m ()
-listsPageInit = undefined
+listsPageInit DemoWindow {..} = do
+    Gtk.listBoxSetHeaderFunc
+        listsListbox
+        (Just (\a b -> Hdy.listBoxSeparatorHeader a b nullPtr))
+    setupComboRow
+    setupEnumRow
+  where
+    setupComboRow = do
+        obj0 <- new Hdy.ValueObject [#value :=> toGValue (Just @Text "Foo")]
+        obj1 <- new Hdy.ValueObject [#value :=> toGValue (Just @Text "Bar")]
+        obj2 <- new Hdy.ValueObject [#value :=> toGValue (Just @Text "Baz")]
+        voType <- liftIO $ gobjectType obj0
+        listStore <- new Gio.ListStore [#itemType := voType]
+        Gio.listStoreInsert listStore 0 obj0
+        Gio.listStoreInsert listStore 1 obj1
+        Gio.listStoreInsert listStore 2 obj2
+        Hdy.comboRowBindNameModel
+            comboRow
+            (Just listStore)
+            (Just
+                 (Gdk.castTo Hdy.ValueObject >=>
+                  Hdy.valueObjectDupString . fromJust))
+    setupEnumRow = do
+        enumType <- liftIO $ boxedEnumType Gtk.LicenseUnknown
+        Hdy.comboRowSetForEnum
+            enumComboRow
+            enumType
+            (Just (`Hdy.enumValueRowName` nullPtr))
 
 demoWindow :: MonadIO m => Gtk.Application -> m DemoWindow
 demoWindow app = do
@@ -168,6 +204,7 @@ demoWindow app = do
     -- set application
     set appWindow [#application := app]
     set arrowsDirectionRow []
+    listsPageInit w
     -- signals
     on appWindow #keyPressEvent (keyPressedCB w)
     on headerBox (Gdk.PropertyNotify #visibleChild) (\_ -> update w)
