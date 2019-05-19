@@ -167,11 +167,15 @@ actionDialog DemoWindow {..} = do
     on dlg #response $ const (Gtk.widgetDestroy dlg)
     dialogLabelAndShow dlg
 
+listBoxSeparate :: MonadIO m => Gtk.ListBox -> m ()
+listBoxSeparate list = 
+    Gtk.listBoxSetHeaderFunc
+        list
+        (Just (\a b -> Hdy.listBoxSeparatorHeader a b nullPtr))
+
 listsPageInit :: MonadIO m => DemoWindow -> m ()
 listsPageInit DemoWindow {..} = do
-    Gtk.listBoxSetHeaderFunc
-        listsListbox
-        (Just (\a b -> Hdy.listBoxSeparatorHeader a b nullPtr))
+    listBoxSeparate listsListbox
     setupComboRow
     setupEnumRow
   where
@@ -205,6 +209,9 @@ demoWindow app = do
     set appWindow [#application := app]
     set arrowsDirectionRow []
     listsPageInit w
+    listBoxSeparate columnListbox
+    listBoxSeparate arrowsListbox
+    set contentBox [ #visibleChildName := "content" ]
     -- signals
     on appWindow #keyPressEvent (keyPressedCB w)
     on headerBox (Gdk.PropertyNotify #visibleChild) (\_ -> update w)
@@ -218,12 +225,15 @@ demoWindow app = do
 
     dialerSignals w
 
-    on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \_ ->
+    on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \_ -> do
         set arrows [#direction :=> pure Hdy.ArrowsDirectionLeft]
-    on adjArrowsCount #valueChanged $
+        Hdy.arrowsAnimate arrows
+    on adjArrowsCount #valueChanged $ do
         set arrows [ #count :=> truncate <$> get adjArrowsCount #value ]
-    on adjArrowsDuration #valueChanged $
+        Hdy.arrowsAnimate arrows
+    on adjArrowsDuration #valueChanged $ do
         set arrows [ #duration :=> truncate <$> get adjArrowsDuration #value ]
+        Hdy.arrowsAnimate arrows
     
     on presentationDialogButton #clicked (presentationDialog w)
     on actionDialogButton #clicked (actionDialog w)
