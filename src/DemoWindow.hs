@@ -50,7 +50,7 @@ data DemoWindow = DemoWindow
     , actionDialogButton :: Gtk.Button
     }
 
-keyPressedCB :: DemoWindow -> Gdk.EventKey -> IO Bool
+keyPressedCB :: MonadIO m => DemoWindow -> Gdk.EventKey -> m Bool
 keyPressedCB win key = do
     kv <- get key #keyval
     st <- get key #state
@@ -59,11 +59,11 @@ keyPressedCB win key = do
         then Gtk.widgetDestroy (appWindow win) $> True
         else pure False
 
-update :: DemoWindow -> IO ()
+update :: MonadIO m => DemoWindow -> m ()
 update DemoWindow {..} = do
     headerChild <-
         do w <- get headerBox #visibleChild
-           Gdk.castTo Gtk.HeaderBar w
+           liftIO $ Gdk.castTo Gtk.HeaderBar w
     fold <- get headerBox #fold
     -- don't use the overloaded function here because it is not nullable!
     Hdy.headerGroupSetFocus headerGroup $
@@ -71,7 +71,7 @@ update DemoWindow {..} = do
             Hdy.FoldFolded -> headerChild
             Hdy.FoldUnfolded -> Nothing
 
-updateHeaderBar :: DemoWindow -> IO ()
+updateHeaderBar :: MonadIO m => DemoWindow -> m ()
 updateHeaderBar DemoWindow {..} = do
     visibleChildName <- get stack #visibleChildName
     set searchButton [#visible := visibleChildName == Just "search-bar"]
@@ -118,25 +118,24 @@ dialerSignals DemoWindow{..} = do
     
     pure ()
 
-dialogLabel :: IO Gtk.Label
-dialogLabel =
-    new Gtk.Label
+dialogLabelAndShow :: (Gtk.IsWidget w, Gtk.IsDialog w, MonadIO m) => w -> m ()
+dialogLabelAndShow dlg = do
+    lbl <- new Gtk.Label
         [ #label := "Hello, World!"
         , #vexpand := True
         , #valign := Gtk.AlignCenter
         , #halign := Gtk.AlignCenter
         ]
-
-presentationDialog :: DemoWindow -> IO ()
-presentationDialog DemoWindow{..} = do
-    dlg <- new Hdy.Dialog [#title := "HdyDialog", #transientFor := appWindow ]
-    lbl <- dialogLabel
-
     Gtk.dialogGetContentArea dlg >>= flip Gtk.containerAdd lbl
     Gtk.widgetShow lbl
     Gtk.widgetShow dlg
 
-actionDialog :: DemoWindow -> IO ()
+presentationDialog :: MonadIO m => DemoWindow -> m ()
+presentationDialog DemoWindow{..} = do
+    dlg <- new Hdy.Dialog [#title := "HdyDialog", #transientFor := appWindow ]
+    dialogLabelAndShow dlg
+
+actionDialog :: MonadIO m => DemoWindow -> m ()
 actionDialog DemoWindow {..} = do
     dlg <-
         new
@@ -157,10 +156,10 @@ actionDialog DemoWindow {..} = do
         dlg
         (fromIntegral . fromEnum $ Gtk.ResponseTypeAccept)
     on dlg #response $ const (Gtk.widgetDestroy dlg)
-    lbl <- dialogLabel
-    Gtk.dialogGetContentArea dlg >>= flip Gtk.containerAdd lbl
-    Gtk.widgetShow lbl
-    Gtk.widgetShow dlg
+    dialogLabelAndShow dlg
+
+listsPageInit :: MonadIO m => DemoWindow -> m ()
+listsPageInit = undefined
 
 demoWindow :: MonadIO m => Gtk.Application -> m DemoWindow
 demoWindow app = do
@@ -182,8 +181,8 @@ demoWindow app = do
 
     dialerSignals w
 
-    {- on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \_ ->
-     -     set arrows [#direction := undefined] -}
+    on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \_ ->
+        set arrows [#direction :=> pure Hdy.ArrowsDirectionLeft]
     on adjArrowsCount #valueChanged $
         set arrows [ #count :=> truncate <$> get adjArrowsCount #value ]
     on adjArrowsDuration #valueChanged $
