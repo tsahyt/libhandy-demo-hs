@@ -201,13 +201,19 @@ listsPageInit DemoWindow {..} = do
             enumType
             (Just (`Hdy.enumValueRowName` nullPtr))
 
+arrowsPageInit :: MonadIO m => DemoWindow -> m ()
+arrowsPageInit DemoWindow{..} = do
+    ty <- liftIO $ boxedEnumType Hdy.ArrowsDirectionLeft
+    Hdy.comboRowSetForEnum arrowsDirectionRow ty 
+            (Just (`Hdy.enumValueRowName` nullPtr))
+
 demoWindow :: MonadIO m => Gtk.Application -> m DemoWindow
 demoWindow app = do
     b <- Gtk.builderNewFromString demoWindowUI (-1)
     w@DemoWindow {..} <- buildWithBuilder buildDemoWindow b
     -- set application
     set appWindow [#application := app]
-    set arrowsDirectionRow []
+    arrowsPageInit w
     listsPageInit w
     listBoxSeparate columnListbox
     listBoxSeparate arrowsListbox
@@ -225,8 +231,11 @@ demoWindow app = do
 
     dialerSignals w
 
-    on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \_ -> do
-        set arrows [#direction :=> pure Hdy.ArrowsDirectionLeft]
+    on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \k -> do
+        set arrows
+            [ #direction :=> toEnum . fromIntegral <$>
+              get arrowsDirectionRow #selectedIndex
+            ]
         Hdy.arrowsAnimate arrows
     on adjArrowsCount #valueChanged $ do
         set arrows [ #count :=> truncate <$> get adjArrowsCount #value ]
