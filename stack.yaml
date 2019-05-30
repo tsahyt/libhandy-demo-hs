@@ -2,16 +2,4 @@ resolver: lts-13.21
 packages:
 - .
 extra-deps:
-    # - ../haskell-gi
-    # - ../haskell-gi/bindings/Pango
-    # - ../haskell-gi/bindings/Gtk
-    # - ../haskell-gi/bindings/Gdk
-    # - ../haskell-gi/bindings/Gio
-    # - ../haskell-gi/bindings/GLib
-    # - ../haskell-gi/bindings/cairo
-    # - ../haskell-gi/bindings/GObject
-    # - ../haskell-gi/bindings/Atk
-    # - ../haskell-gi/bindings/GdkPixbuf
-    # - ../haskell-gi/base
-    # - ../haskell-gi/gi-gtk-hs
 - ../haskell-gi/bindings/Handy
